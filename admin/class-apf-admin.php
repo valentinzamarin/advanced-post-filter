@@ -48,26 +48,13 @@ class Apf_Admin {
 	 * @param      string    $version    The version of this plugin.
 	 */
 
-	private $post_types = array();
-	private $pagination_type = [
-		'num' => 'Numeric',
-		'loadmore' => 'Loadmore',
-	];
 
 	public function __construct( $plugin_name, $version ) {
 
 		$this->plugin_name = $plugin_name;
 		$this->version = $version;
 
-		$args = array(
-			'public'   => true,
-			'_builtin' => true
-		);
-		
-		$output = 'names'; // 'names' or 'objects' (default: 'names')
-		$operator = 'and'; // 'and' or 'or' (default: 'and')
-		
-		$this->post_types = get_post_types( $args, $output, $operator );
+	
 	}
 
 	public function register_filter_post_types () {
@@ -108,45 +95,10 @@ class Apf_Admin {
 			'filter_meta',
 			'Settings',
 			function ( $post ) {
-				$post_type    = get_post_meta( $post->ID, 'apf_post_type', true );
 				$filter_count = get_post_meta( $post->ID, 'apf_count', true );
-				$pagination   = get_post_meta( $post->ID, 'apf_pagination', true );
 				wp_nonce_field( 'apf_save_meta', 'apf_nonce' );
 				?>
 				<div>
-				<label>
-					Post type
-					<?php
-						echo '<select name="apf_post_type" class="widefat">';
-						echo '<option value="null">All</option>';
-						foreach ( $this->post_types as $type ) :
-						$selected = '';
-						if ( $type == $post_type ) {
-							$selected = 'selected="selected"';
-						}
-						echo '<option value="' . $type . '"' . selected( 'apf_post_type', $type ) . $selected . ' >' . $type . '</option>';
-						endforeach;
-						echo '</select>';
-						?>
-				
-
-				</label>
-				<label>
-					Pagination
-					<?php
-						echo '<select name="apf_pagination" class="widefat">';
-						foreach ( $this->pagination_type as $type ) :
-						$selected = '';
-						if ( $type == $pagination ) {
-							$selected = 'selected="selected"';
-						}
-						echo '<option value="' . $type . '"' . selected( 'apf_pagination', $type ) . $selected . ' >' . $type . '</option>';
-						endforeach;
-						echo '</select>';
-						?>
-				
-
-				</label>
 				<label>
 					Post count
 					<input type="number"
@@ -171,9 +123,7 @@ class Apf_Admin {
 		}
 
 		$keys = array(
-			'apf_post_type',
 			'apf_count',
-			'apf_pagination',
 		);
 
 		foreach ( $keys as $key ) {

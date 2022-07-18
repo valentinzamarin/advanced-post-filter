@@ -63,14 +63,12 @@ class Apf_Public {
 	public function filter_shortcode( $atts ) {
 		$filter_id = $atts['id'];		
 		
-		$post_type = get_post_meta( $filter_id, 'apf_post_type', true );
 		$post_count = get_post_meta( $filter_id, 'apf_count', true );
 		$post_count = intval( $post_count );
-		$filter_pagination = get_post_meta( $filter_id, 'apf_pagination', true );
 		
 		$this->APF_Filter_Form( $filter_id );
 		echo '<div class="apf-response">';
-		$this->APF_Shortcode_Query( $post_type, $post_count, $filter_pagination );
+		$this->APF_Shortcode_Query( $post_count );
 		echo '</div>';
 		
 	}
@@ -83,7 +81,7 @@ class Apf_Public {
 		]);
         $form = '<form class="apf-filter" data-filter="' . $filter_id . '">';
         foreach ($terms as $term){
-			$form .= '<label for="' . $term->slug . '">';
+			$form .= '<label for="filter' . $filter_id . '-' . $term->slug . '">';
             $form .= '<input id="' . $term->slug . '" type="checkbox" name="' . $term->slug . '" value="'.$term->term_id.'" class="btn-filter" />';
             $form .= $term->name;
             $form .= '</label>';          
@@ -91,7 +89,7 @@ class Apf_Public {
         $form .= '</form>'; 
 		echo $form;
 	}
-	public function APF_Shortcode_Query( string $post_type, int $post_count, string $filter_pagination = 'Numeric', int $paged = 1, array $categories  = []) { 
+	public function APF_Shortcode_Query( int $post_count, int $paged = 1, array $categories  = []) { 
 
 		$tax_query = array(
             'relation' => 'OR'
@@ -117,21 +115,14 @@ class Apf_Public {
 		if ( $query->have_posts() ) {
             while ( $query->have_posts() ) {
                 $query->the_post(); 
-                get_template_part( 'content' );
+                include APF_PLUGIN_DIR . '/public/partials/apf-public-display-post.php';
             }
         } else {
             get_template_part( 'content', 'none' );
         }
         wp_reset_postdata();
 		
-		switch ( $filter_pagination ) {
-			case 'Numeric':
-				$this->APF_Numeric_Pagination( $found_posts, $post_count );
-				break;
-			case 'Loadmore':
-				$this->APF_Loadmore_Button();
-				break;
-		}
+		$this->APF_Numeric_Pagination( $found_posts, $post_count );
 		
 	}
 
@@ -151,13 +142,11 @@ class Apf_Public {
 			$categories = [];
 		}
 
-		$post_type = get_post_meta( $filter_id, 'apf_post_type', true );
 		$post_count = get_post_meta( $filter_id, 'apf_count', true );
-		$filter_pagination = get_post_meta( $filter_id, 'apf_pagination', true );
 
 		$content = '';
 		ob_start();
-			$this->APF_Shortcode_Query( $post_type, $post_count, $filter_pagination, $paged, $categories );
+			$this->APF_Shortcode_Query( $post_count, $paged, $categories );
 		$content = ob_get_contents();
 		ob_end_clean();
 		$result = [
@@ -189,13 +178,6 @@ class Apf_Public {
 			echo $pagination;
 		}   
 	}
-
-	public function APF_Loadmore_Button() { ?>
-		<button class="apf-loadmore">
-			Loadmore
-		</button>	
-	
-	<?php }
 
 	public function enqueue_styles() {
 
