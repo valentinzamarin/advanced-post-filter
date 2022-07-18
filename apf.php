@@ -37,6 +37,10 @@ if ( ! defined( 'WPINC' ) ) {
  */
 define( 'APF_VERSION', '1.0.0' );
 
+define( 'APF_PLUGIN', __FILE__ );
+
+define( 'APF_PLUGIN_DIR', untrailingslashit( dirname( APF_PLUGIN ) ) );
+
 /**
  * The code that runs during plugin activation.
  * This action is documented in includes/class-apf-activator.php

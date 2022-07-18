@@ -59,19 +59,145 @@ class Apf_Public {
 	 *
 	 * @since    1.0.0
 	 */
-	public function enqueue_styles() {
 
-		/**
-		 * This function is provided for demonstration purposes only.
-		 *
-		 * An instance of this class should be passed to the run() function
-		 * defined in Apf_Loader as all of the hooks are defined
-		 * in that particular class.
-		 *
-		 * The Apf_Loader will then create the relationship
-		 * between the defined hooks and the functions defined in this
-		 * class.
-		 */
+	public function filter_shortcode( $atts ) {
+		$filter_id = $atts['id'];		
+		
+		$post_type = get_post_meta( $filter_id, 'apf_post_type', true );
+		$post_count = get_post_meta( $filter_id, 'apf_count', true );
+		$post_count = intval( $post_count );
+		$filter_pagination = get_post_meta( $filter_id, 'apf_pagination', true );
+		
+		$this->APF_Filter_Form( $filter_id );
+		echo '<div class="apf-response">';
+		$this->APF_Shortcode_Query( $post_type, $post_count, $filter_pagination );
+		echo '</div>';
+		
+	}
+	
+	public function APF_Filter_Form( string $filter_id ) {
+		$terms  = get_terms([
+			'taxonomy' => 'category',
+            'hide_empty' => false,
+            'exclude' => [ 1 ],
+		]);
+        $form = '<form class="apf-filter" data-filter="' . $filter_id . '">';
+        foreach ($terms as $term){
+			$form .= '<label for="' . $term->slug . '">';
+            $form .= '<input id="' . $term->slug . '" type="checkbox" name="' . $term->slug . '" value="'.$term->term_id.'" class="btn-filter" />';
+            $form .= $term->name;
+            $form .= '</label>';          
+        }
+        $form .= '</form>'; 
+		echo $form;
+	}
+	public function APF_Shortcode_Query( string $post_type, int $post_count, string $filter_pagination = 'Numeric', int $paged = 1, array $categories  = []) { 
+
+		$tax_query = array(
+            'relation' => 'OR'
+        );
+		if( $categories ) {
+			$tax_query[] =  array(
+				'taxonomy' => 'category',
+				'field' => 'id',
+				'terms' => $categories,
+				'include_children' => false
+			);
+		}
+
+		$args = array(
+            'post_type'      => $type,
+            'posts_per_page' => $post_count,
+			'tax_query'      => $tax_query,
+			'paged'          => $paged,
+        );  
+		$query = new WP_Query( $args );
+
+		$found_posts = $query->found_posts;       
+		if ( $query->have_posts() ) {
+            while ( $query->have_posts() ) {
+                $query->the_post(); 
+                get_template_part( 'content' );
+            }
+        } else {
+            get_template_part( 'content', 'none' );
+        }
+        wp_reset_postdata();
+		
+		switch ( $filter_pagination ) {
+			case 'Numeric':
+				$this->APF_Numeric_Pagination( $found_posts, $post_count );
+				break;
+			case 'Loadmore':
+				$this->APF_Loadmore_Button();
+				break;
+		}
+		
+	}
+
+	public function APF_Filter_Result() {
+		check_ajax_referer( 'apf', 'nonce' );
+		$filter_id = $_POST['id'];
+
+		if( isset( $_POST['page'] ) ){
+			$paged = $_POST['page'];
+		} else {
+			$paged = 1;
+		}
+		if( isset( $_POST['categories'] ) && !empty( $_POST['categories'] ) ){
+			$values = $_POST['categories'];
+			$categories = explode(",",  $values);
+		} else {
+			$categories = [];
+		}
+
+		$post_type = get_post_meta( $filter_id, 'apf_post_type', true );
+		$post_count = get_post_meta( $filter_id, 'apf_count', true );
+		$filter_pagination = get_post_meta( $filter_id, 'apf_pagination', true );
+
+		$content = '';
+		ob_start();
+			$this->APF_Shortcode_Query( $post_type, $post_count, $filter_pagination, $paged, $categories );
+		$content = ob_get_contents();
+		ob_end_clean();
+		$result = [
+			'content' => $content,
+		];
+		wp_send_json_success( $result );
+	}
+
+	public function APF_Numeric_Pagination( $found_posts, $post_count ) {
+            
+		$pages = ceil( $found_posts / $post_count);
+		$pagination = '';
+		ob_start(); 
+		?>
+			<nav aria-label="">
+				<ul class="pagination"> 
+						<?php
+						for ($i = 1; $i <= $pages; $i++) {
+							echo '<li class="page-item"><a data-page="'.$i.'" class="page-link apf-page" href="#">'.$i.'</a></li>';
+						} 
+					?> 
+				</ul>
+			</nav>
+		<?php
+		$pagination = ob_get_contents();
+		ob_end_clean();
+		
+		if( intval( $pages ) !== 1 ) {
+			echo $pagination;
+		}   
+	}
+
+	public function APF_Loadmore_Button() { ?>
+		<button class="apf-loadmore">
+			Loadmore
+		</button>	
+	
+	<?php }
+
+	public function enqueue_styles() {
 
 		wp_enqueue_style( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'css/apf-public.css', array(), $this->version, 'all' );
 
@@ -97,6 +223,11 @@ class Apf_Public {
 		 */
 
 		wp_enqueue_script( $this->plugin_name, plugin_dir_url( __FILE__ ) . 'js/apf-public.js', array( 'jquery' ), $this->version, false );
+		wp_localize_script(  $this->plugin_name , 'apf', array(
+			'nonce'    => wp_create_nonce( 'apf' ),
+			'ajax_url' => admin_url( 'admin-ajax.php' )
+	));
+
 
 	}
 

@@ -153,8 +153,11 @@ class Apf {
 	private function define_admin_hooks() {
 
 		$plugin_admin = new Apf_Admin( $this->get_plugin_name(), $this->get_version() );
-
-		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+		
+		// $this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_styles' );
+		$this->loader->add_action( 'init', $plugin_admin, 'register_filter_post_types' );
+		$this->loader->add_action( 'add_meta_boxes', $plugin_admin, 'filter_post_type_meta' );
+		$this->loader->add_action( 'save_post', $plugin_admin, 'filter_save_post_meta' );
 		$this->loader->add_action( 'admin_enqueue_scripts', $plugin_admin, 'enqueue_scripts' );
 
 	}
@@ -170,9 +173,12 @@ class Apf {
 
 		$plugin_public = new Apf_Public( $this->get_plugin_name(), $this->get_version() );
 
+		$this->loader->add_shortcode( 'apf_filter', $plugin_public, 'filter_shortcode' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
+		$this->loader->add_action( 'wp_ajax_afp_get_posts', $plugin_public, 'APF_Filter_Result' );
+		$this->loader->add_action( 'wp_ajax_nopriv_afp_get_posts', $plugin_public, 'APF_Filter_Result' );
 	}
 
 	/**
